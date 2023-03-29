@@ -13,7 +13,7 @@ import argparse
 import os.path as osp
 import os
 size_coarse = (10, 10)
-from fvcore.nn.flop_count import flop_count
+#from fvcore.nn.flop_count import flop_count
 
 
 class Solver(object):
@@ -75,9 +75,9 @@ class Solver(object):
         print('model size: {:.6f}MB'.format(size_all_mb))
         print("The number of trainable parameters: {:.6f}".format(num_params_t))
         print("The number of parameters: {:.6f}".format(num_params))
-        gflop_dict, _ = flop_count(model, inputs)
-        gflops = sum(gflop_dict.values())
-        print('Number of gflops',gflops)
+        #gflop_dict, _ = flop_count(model, inputs)
+        #gflops = sum(gflop_dict.values())
+        #print('Number of gflops',gflops)
 
     def test(self):
         print('Testing...')
