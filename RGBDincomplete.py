@@ -79,7 +79,8 @@ class RGBD_incomplete(nn.Module):
         self.RGBDInModule = RGBDInModule
         self.embed_dim=embed_dim
         self.relu = nn.ReLU(inplace=True)
-        self.conv_stage1=nn.Sequential(nn.Conv2d(self.embed_dim, self.embed_dim, 3,padding=1), self.relu,nn.Conv2d(self.embed_dim, self.embed_dim, 3,padding=1), self.relu)
+        self.conv_stage1=nn.Sequential(nn.Conv2d(self.embed_dim, self.embed_dim, 3,padding=1), self.relu,
+                                       nn.Conv2d(self.embed_dim, self.embed_dim, 5,padding=1), self.relu)
         self.conv_stage2=nn.Sequential(nn.Conv2d(self.embed_dim*2, self.embed_dim, 3,padding=1), self.relu)
         self.conv_stage3=nn.Sequential(nn.Conv2d(self.embed_dim*4, self.embed_dim, 3,padding=1), self.relu)
         self.conv_stage4=nn.Sequential(nn.Conv2d(self.embed_dim*8, self.embed_dim, 3,padding=1), self.relu)
