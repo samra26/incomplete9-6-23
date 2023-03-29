@@ -61,9 +61,9 @@ class RGBDInModule(nn.Module):
         a=[1,5,37,40]
         count=0
         for i in a:
-            #print(i,'The backbone features are',x1[i].shape)
+            print(i,'The backbone features are',x1[i].shape)
             x_r=eval('self.expand_block_' + str(count))(x1[i])
-            #print(i,x_r.shape)
+            print(i,x_r.shape)
             count=count+1
             feature_stage.append(x_r)
             
