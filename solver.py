@@ -52,35 +52,29 @@ class Solver(object):
 
         self.optimizer = torch.optim.Adam(self.net.parameters(), lr=self.lr, weight_decay=self.wd)
 
-        #self.print_network(self.net, 'Incomplete modality RGBD SOD Structure')
+        self.print_network(self.net, 'Incomplete modality RGBD SOD Structure')
 
     # print the network information and parameter numbers
     def print_network(self, model, name):
         num_params_t = 0
         num_params=0
+        param_size = 0
+
         for p in model.parameters():
+            param_size += p.nelement() * p.element_size()
             if p.requires_grad:
                 num_params_t += p.numel()
             else:
                 num_params += p.numel()
-        print(name)
-        print(model)
-        print("The number of trainable parameters: {}".format(num_params_t))
-        print("The number of parameters: {}".format(num_params))
-
-    # build the network
-    '''def build_model(self):
-        self.net = build_model(self.config.network, self.config.arch)
-
-        if self.config.cuda:
-            self.net = self.net.cuda()
-
-        self.lr = self.config.lr
-        self.wd = self.config.wd
-
-        self.optimizer = torch.optim.Adam(self.net.parameters(), lr=self.lr, weight_decay=self.wd)
-
-        self.print_network(self.net, 'JL-DCF Structure')'''
+        buffer_size = 0
+        for buffer in model.buffers():
+            buffer_size += buffer.nelement() * buffer.element_size()
+        #print(name)
+        #print(model)
+        size_all_mb = (param_size + buffer_size) / 1024**2
+        print('model size: {:.6f}MB'.format(size_all_mb))
+        print("The number of trainable parameters: {:.6f}".format(num_params_t))
+        print("The number of parameters: {:.6f}".format(num_params))
 
     def test(self):
         print('Testing...')
