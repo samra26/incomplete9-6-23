@@ -13,22 +13,21 @@ import argparse
 import os.path as osp
 import os
 size_coarse = (10, 10)
-#from fvcore.nn.flop_count import flop_count
+from tqdm import trange, tqdm
+
+
 
 
 class Solver(object):
-    def __init__(self, train_loader, test_loader, config):
+    def __init__(self, train_loader,val_loader, test_loader, config):
         self.train_loader = train_loader
+        self.val_loader = val_loader
         self.test_loader = test_loader
         self.config = config
         self.iter_size = config.iter_size
         self.show_every = config.show_every
-        self.model_type = config.model_type
-        self.save_folder_rgb = config.save_folder_rgb
-        self.save_folder_depth = config.save_folder_depth
-        self.save_folder = config.save_folder
         #self.build_model()
-        self.net = build_model(self.config.network, self.config.arch,self.config.embed_dim)
+        self.net = build_model(self.config.network, self.config.arch)
         #self.net.eval()
         if config.mode == 'test':
             print('Loading pre-trained model for testing from %s...' % self.config.model)
@@ -52,32 +51,35 @@ class Solver(object):
 
         self.optimizer = torch.optim.Adam(self.net.parameters(), lr=self.lr, weight_decay=self.wd)
 
-        self.print_network(self.net, 'Incomplete modality RGBD SOD Structure')
+        #self.print_network(self.net, 'Incomplete modality RGBD SOD Structure')
 
     # print the network information and parameter numbers
     def print_network(self, model, name):
         num_params_t = 0
         num_params=0
-        param_size = 0
-
         for p in model.parameters():
-            param_size += p.nelement() * p.element_size()
             if p.requires_grad:
                 num_params_t += p.numel()
             else:
                 num_params += p.numel()
-        buffer_size = 0
-        for buffer in model.buffers():
-            buffer_size += buffer.nelement() * buffer.element_size()
-        #print(name)
-        #print(model)
-        size_all_mb = (param_size + buffer_size) / 1024**2
-        print('model size: {:.6f}MB'.format(size_all_mb))
-        print("The number of trainable parameters: {:.6f}".format(num_params_t))
-        print("The number of parameters: {:.6f}".format(num_params))
-        #gflop_dict, _ = flop_count(model, inputs)
-        #gflops = sum(gflop_dict.values())
-        #print('Number of gflops',gflops)
+        print(name)
+        print(model)
+        print("The number of trainable parameters: {}".format(num_params_t))
+        print("The number of parameters: {}".format(num_params))
+
+    # build the network
+    '''def build_model(self):
+        self.net = build_model(self.config.network, self.config.arch)
+
+        if self.config.cuda:
+            self.net = self.net.cuda()
+
+        self.lr = self.config.lr
+        self.wd = self.config.wd
+
+        self.optimizer = torch.optim.Adam(self.net.parameters(), lr=self.lr, weight_decay=self.wd)
+
+        self.print_network(self.net, 'JL-DCF Structure')'''
 
     def test(self):
         print('Testing...')
@@ -109,114 +111,65 @@ class Solver(object):
   
     # training phase
     def train(self):
-        iter_num = len(self.train_loader.dataset) // self.config.batch_size
+        iter_num = len(self.train_loader.dataset) // self.config.batch_size_train
         
         loss_vals=  []
-        
+        self.net.train()
         for epoch in range(self.config.epoch):
             r_sal_loss = 0
             r_sal_loss_item=0
-            if self.model_type == 'teacherRGB':
-                for i, data_batch in enumerate(self.train_loader):
-                    sal_image, sal_label= data_batch[0], data_batch[1]
-                    if (sal_image.size(2) != sal_label.size(2)) or (sal_image.size(3) != sal_label.size(3)):
-                        print('IMAGE ERROR, PASSING```')
-                        continue
-                    if self.config.cuda:
-                        device = torch.device(self.config.device_id)
-                        sal_image,  sal_label= sal_image.to(device),sal_label.to(device)
-                    self.optimizer.zero_grad()
-                    sal_rgb_only = self.net(sal_image)
-                    sal_rgb_only_loss =  F.binary_cross_entropy_with_logits(sal_rgb_only, sal_label, reduction='sum')
-                    sal_rgb_only_loss = sal_rgb_only_loss/ (self.iter_size * self.config.batch_size)
-                    r_sal_loss += sal_rgb_only_loss.data
-                    r_sal_loss_item+=sal_rgb_only_loss.item() * sal_image.size(0)
-                    sal_rgb_only_loss.backward()
-                    self.optimizer.step()
-                    if (i + 1) % (self.show_every // self.config.batch_size) == 0:
-                        print('epoch: [%2d/%2d], iter: [%5d/%5d]  ||  sal_rgb_only_loss : %0.4f' % (
-                            epoch, self.config.epoch, i + 1, iter_num, r_sal_loss ))
-                        # print('Learning rate: ' + str(self.lr))
-                        writer.add_scalar('training loss', r_sal_loss / (self.show_every / self.iter_size),
-                                        epoch * len(self.train_loader.dataset) + i)
-                   
-                        fsal = sal_rgb_only[0].clone()
-                        fsal = fsal.sigmoid().data.cpu().numpy().squeeze()
-                        fsal = (fsal - fsal.min()) / (fsal.max() - fsal.min() + 1e-8)
-                        writer.add_image('sal_rgb_final', torch.tensor(fsal), i, dataformats='HW')
-                        grid_image = make_grid(sal_label[0].clone().cpu().data, 1, normalize=True)
-            else:
-                for i, data_batch in enumerate(self.train_loader):
-                    sal_image, sal_depth, sal_label= data_batch[0], data_batch[1] , data_batch[2]
-                    if (sal_image.size(2) != sal_label.size(2)) or (sal_image.size(3) != sal_label.size(3)):
-                        print('IMAGE ERROR, PASSING```')
-                        continue
-                    if self.config.cuda:
-                        device = torch.device(self.config.device_id)
-                        sal_image, sal_depth, sal_label= sal_image.to(device),sal_depth.to(device), sal_label.to(device)
-                    self.optimizer.zero_grad()
-                    if self.model_type == 'teacherDepth':
-                        sal_depth_only = self.net(sal_depth)
-                        sal_depth_only_loss =  F.binary_cross_entropy_with_logits(sal_depth_only, sal_label, reduction='sum')
-                        sal_depth_only_loss = sal_depth_only_loss/ (self.iter_size * self.config.batch_size)
-                        r_sal_loss += sal_depth_only_loss.data
-                        r_sal_loss_item+=sal_depth_only_loss.item() * sal_depth.size(0)
-                        sal_depth_only_loss.backward()
-                        self.optimizer.step()
-                        if (i + 1) % (self.show_every // self.config.batch_size) == 0:
-                            print('epoch: [%2d/%2d], iter: [%5d/%5d]  ||  sal_depth_only_loss : %0.4f' % (
-                                epoch, self.config.epoch, i + 1, iter_num, r_sal_loss ))
-                            # print('Learning rate: ' + str(self.lr))
-                            writer.add_scalar('training loss', r_sal_loss / (self.show_every / self.iter_size),
-                                            epoch * len(self.train_loader.dataset) + i)
-                   
-                            fsal = sal_depth_only[0].clone()
-                            fsal = fsal.sigmoid().data.cpu().numpy().squeeze()
-                            fsal = (fsal - fsal.min()) / (fsal.max() - fsal.min() + 1e-8)
-                            writer.add_image('sal_depth_final', torch.tensor(fsal), i, dataformats='HW')
-                            grid_image = make_grid(sal_label[0].clone().cpu().data, 1, normalize=True)
-                    else:   
-                        sal_final = self.net(sal_image,sal_depth)
-                        sal_final_loss =  F.binary_cross_entropy_with_logits(sal_final, sal_label, reduction='sum')
-                        sal_final_loss = sal_final_loss/ (self.iter_size * self.config.batch_size)
-                        r_sal_loss += sal_final_loss.data
-                        r_sal_loss_item+=sal_final_loss.item() * sal_image.size(0)
-                        sal_final_loss.backward()
-                        self.optimizer.step()
-                        if (i + 1) % (self.show_every // self.config.batch_size) == 0:
-                            print('epoch: [%2d/%2d], iter: [%5d/%5d]  ||  sal_final_loss : %0.4f' % (
-                                epoch, self.config.epoch, i + 1, iter_num, r_sal_loss ))
-                            # print('Learning rate: ' + str(self.lr))
-                            writer.add_scalar('training loss', r_sal_loss / (self.show_every / self.iter_size),
-                                            epoch * len(self.train_loader.dataset) + i)
-                   
-                            fsal = sal_final[0].clone()
-                            fsal = fsal.sigmoid().data.cpu().numpy().squeeze()
-                            fsal = (fsal - fsal.min()) / (fsal.max() - fsal.min() + 1e-8)
-                            writer.add_image('sal_final', torch.tensor(fsal), i, dataformats='HW')
-                            grid_image = make_grid(sal_label[0].clone().cpu().data, 1, normalize=True)
+            for i, data_batch in tqdm(enumerate(self.train_loader)):
+                sal_image, sal_label= data_batch[0], data_batch[1]
 
-                   
+             
+                if (sal_image.size(2) != sal_label.size(2)) or (sal_image.size(3) != sal_label.size(3)):
+                    print('IMAGE ERROR, PASSING```')
+                    continue
+                if self.config.cuda:
+                    device = torch.device(self.config.device_id)
+                    sal_image,  sal_label= sal_image.to(device),sal_label.to(device)
+              
+                self.optimizer.zero_grad()
+               
+                sal_rgb_only = self.net(sal_image)
+                sal_rgb_only_loss =  F.binary_cross_entropy_with_logits(sal_rgb_only, sal_label, reduction='sum')
 
+                sal_rgb_only_loss = sal_rgb_only_loss/ (self.iter_size * self.config.batch_size_train)
+                r_sal_loss += sal_rgb_only_loss.data
+                r_sal_loss_item+=sal_rgb_only_loss.item() * sal_image.size(0)
+                sal_rgb_only_loss.backward()
+                self.optimizer.step()
 
+ 
             if (epoch + 1) % self.config.epoch_save == 0:
-                if self.model_type == 'teacherRGB':
-                    torch.save(self.net.state_dict(), '%s/epoch_%d.pth' % (self.save_folder_rgb, epoch + 1))
-                elif self.model_type == 'teacherDepth':
-                    torch.save(self.net.state_dict(), '%s/epoch_%d.pth' % (self.save_folder_depth, epoch + 1))
-                else:
-                    torch.save(self.net.state_dict(), '%s/epoch_%d.pth' % (self.save_folder, epoch + 1))
+                torch.save(self.net.state_dict(), '%s/epoch_%d.pth' % (self.config.save_folder, epoch + 1))
             train_loss=r_sal_loss_item/len(self.train_loader.dataset)
             loss_vals.append(train_loss)
             
             print('Epoch:[%2d/%2d] | Train Loss : %.3f' % (epoch, self.config.epoch,train_loss))
+            print('learning rate',self.optimizer.param_groups[0]['lr'])
+            # Evaluate the model on the validation set
+            self.net.eval()
+            running_val_loss = 0.0
+
+            with torch.no_grad():
+                for i, data_batch in tqdm(enumerate(self.val_loader)):
+                    valid_image, valid_label= data_batch[0], data_batch[1]
+
+   
+                    if self.config.cuda:
+                        device = torch.device(self.config.device_id)
+                        valid_image, valid_label=valid_image.to(device),valid_label.to(device)
+            
+                    valid_rgb_only = self.net(valid_image)
+                    valid_rgb_only_loss =  F.binary_cross_entropy_with_logits(valid_rgb_only,valid_label, reduction='sum')
+                                  
+                    running_val_loss+=valid_rgb_only_loss.item() * valid_image.size(0)
+ 
+            # Calculate validation loss
+            val_epoch_loss = running_val_loss / len(self.val_loader.dataset)
+            print(f'Validation Loss: {val_epoch_loss:.6f}')
             
         # save model
-        if self.model_type == 'teacherRGB':
-            torch.save(self.net.state_dict(), '%s/final.pth' % self.save_folder_rgb)
-        elif self.model_type == 'teacherDepth':
-            torch.save(self.net.state_dict(), '%s/final.pth' % self.save_folder_depth)
-        else:
-            torch.save(self.net.state_dict(), '%s/final.pth' % self.save_folder)
+        torch.save(self.net.state_dict(), '%s/final.pth' % self.config.save_folder)
         
-
