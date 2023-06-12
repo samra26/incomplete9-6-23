@@ -105,6 +105,11 @@ class RGBD_incomplete(nn.Module):
         self.ca_stage2=ChannelAttention(145)
         self.ca_stage3=ChannelAttention(289)
         self.ca_stage4=ChannelAttention(577)
+        
+        self.sal_stage1=nn.Sequential(nn.Conv2d(1, 1, 3,1,1), self.relu)
+        self.sal_stage2=nn.Sequential(nn.Conv2d(k_channels[0]+1, 1, 1,1), self.relu)
+        self.sal_stage3=nn.Sequential(nn.Conv2d(k_channels[1]+1, 1, 1,1), self.relu)
+        self.sal_stage4=nn.Sequential(nn.Conv2d(k_channels[2]+1, 1, 1,1), self.relu)
         self.last_conv=nn.Conv2d(4,1,1,1)
 
         
@@ -115,30 +120,32 @@ class RGBD_incomplete(nn.Module):
         rgb_branch2 = self.conv_stage2(feat_rgb[1])*feat_rgb[1]
         rgb_branch3 = self.conv_stage3(feat_rgb[2])*feat_rgb[2]
         rgb_branch4 = self.conv_stage4(feat_rgb[3])*feat_rgb[3]
-        print(rgb_branch1.shape)
-        print(rgb_branch2.shape)
-        print(rgb_branch3.shape)
-        print(rgb_branch4.shape)
+
         #concatenation of adjacent features
         rgb_out4 = torch.cat((self.deconv_stage4(rgb_branch4),rgb_branch3),dim=1)
         rgb_out3 = torch.cat((self.deconv_stage3(rgb_branch3),rgb_branch2),dim=1)
         rgb_out2 = torch.cat((self.deconv_stage2(rgb_branch2),rgb_branch1),dim=1)
         rgb_out1 = self.deconv_stage1(rgb_branch1)
      
+        #channel attention
         rgb_out4ca = self.ca_stage4(rgb_out4)
         rgb_out3ca = self.ca_stage3(rgb_out3)
         rgb_out2ca = self.ca_stage2(rgb_out2)
         rgb_out1ca = self.ca_stage1(rgb_out1)
-        print(rgb_branch1.shape,rgb_out1.shape,rgb_out1ca.shape)
-        print(rgb_branch2.shape,rgb_out2.shape,rgb_out2ca.shape)
-        print(rgb_branch3.shape,rgb_out3.shape,rgb_out3ca.shape)
-        print(rgb_branch4.shape,rgb_out4.shape,rgb_out4ca.shape)
-        rgb_out4 = torch.cat((self.deconv(rgb_branch4),rgb_branch3),dim=0)
-        rgb_out3 = torch.cat((self.deconv(rgb_branch3),rgb_branch2),dim=0)
-        rgb_out2 = torch.cat((self.deconv(rgb_branch2),rgb_branch1),dim=0)
-        rgb_out1 = self.deconv(rgb_branch1)
+        
+        #saliency maps at multi scales
+        rgb_sal_1=self.sal_stage1(rgb_out1ca)
+        rgb_sal_2=self.sal_stage2(rgb_out2ca)
+        rgb_sal_3=self.sal_stage3(rgb_out3ca)
+        rgb_sal_4=self.sal_stage4(rgb_out4ca)
+        
+        print(rgb_branch1.shape,rgb_out1.shape,rgb_out1ca.shape,rgb_sal_1.shape)
+        print(rgb_branch2.shape,rgb_out2.shape,rgb_out2ca.shape,rgb_sal_2.shape)
+        print(rgb_branch3.shape,rgb_out3.shape,rgb_out3ca.shape,rgb_sal_3.shape)
+        print(rgb_branch4.shape,rgb_out4.shape,rgb_out4ca.shape,rgb_sal_4.shape)
+  
      
-        feat_rgb_out=self.last_conv(torch.cat((rgb_out1,rgb_out2,rgb_out3,rgb_out4),dim=1))
+        feat_rgb_out=self.last_conv(torch.cat((rgb_sal_1,rgb_sal_2,rgb_sal_3,rgb_sal_4),dim=1))
         print(feat_rgb_out.shape)
         
         return feat_rgb_out
