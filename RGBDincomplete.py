@@ -80,17 +80,11 @@ class ChannelAttention(nn.Module):
 
     def forward(self, x):
         batch_size, num_channels, height, width = x.size()
-        print(batch_size, num_channels, height, width)
         avg_pool = self.avg_pool(x).view(batch_size, num_channels)
-        print(avg_pool.shape)
         fc1 = self.relu(self.fc1(avg_pool))
-        print(fc1.shape)
         fc2 = self.sigmoid(self.fc2(fc1))
-        print(fc2.shape)
         fc2 = fc2.view(batch_size, num_channels, 1, 1)
-        print(fc2.shape)
         out=fc2*x
-        print(out.shape)
         return out
 
 class SpatialAttention(nn.Module):
@@ -119,8 +113,7 @@ class RGBD_incomplete(nn.Module):
         self.deconv_stage2=nn.ConvTranspose2d(k_channels[1],1,kernel_size=3, stride=2, padding=1, output_padding=1, dilation=1)
         self.deconv_stage3=nn.ConvTranspose2d(k_channels[2],1,kernel_size=3, stride=2, padding=1, output_padding=1, dilation=1)
         self.deconv_stage4=nn.ConvTranspose2d(k_channels[3],1,kernel_size=3, stride=2, padding=1, output_padding=1, dilation=1)
-        
-        self.ca_stage1=ChannelAttention(1)
+    
         self.ca_stage2=ChannelAttention(145)
         self.ca_stage3=ChannelAttention(289)
         self.ca_stage4=ChannelAttention(577)
@@ -150,7 +143,7 @@ class RGBD_incomplete(nn.Module):
         rgb_out4ca = self.ca_stage4(rgb_out4)
         rgb_out3ca = self.ca_stage3(rgb_out3)
         rgb_out2ca = self.ca_stage2(rgb_out2)
-        rgb_out1ca = self.ca_stage1(rgb_out1)
+        rgb_out1ca = rgb_out1
         
         #saliency maps at multi scales
         rgb_sal_1=self.sal_stage1(rgb_out1ca)
@@ -158,10 +151,10 @@ class RGBD_incomplete(nn.Module):
         rgb_sal_3=self.sal_stage3(rgb_out3ca)
         rgb_sal_4=self.sal_stage4(rgb_out4ca)
         
-        '''print(rgb_branch1.shape,rgb_out1.shape,rgb_out1ca.shape,rgb_sal_1.shape)
+        print(rgb_branch1.shape,rgb_out1.shape,rgb_out1ca.shape,rgb_sal_1.shape)
         print(rgb_branch2.shape,rgb_out2.shape,rgb_out2ca.shape,rgb_sal_2.shape)
         print(rgb_branch3.shape,rgb_out3.shape,rgb_out3ca.shape,rgb_sal_3.shape)
-        print(rgb_branch4.shape,rgb_out4.shape,rgb_out4ca.shape,rgb_sal_4.shape)'''
+        print(rgb_branch4.shape,rgb_out4.shape,rgb_out4ca.shape,rgb_sal_4.shape)
   
         # Resize tensors to have the same number of channels
         tensor_1 = torch.nn.functional.interpolate(rgb_sal_1, size=(384,384))
