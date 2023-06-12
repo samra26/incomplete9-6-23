@@ -68,7 +68,22 @@ class RGBDInModule(nn.Module):
 
         return feature_stage
         
+class ChannelAttention(nn.Module):
+    def __init__(self, in_channels, reduction_ratio=16):
+        super(ChannelAttention, self).__init__()
+        self.avg_pool = nn.AdaptiveAvgPool2d(1)
+        self.fc1 = nn.Linear(in_channels, in_channels // reduction_ratio)
+        self.relu = nn.ReLU()
+        self.fc2 = nn.Linear(in_channels // reduction_ratio, in_channels)
+        self.sigmoid = nn.Sigmoid()
 
+    def forward(self, x):
+        batch_size, num_channels, height, width = x.size()
+        avg_pool = self.avg_pool(x).view(batch_size, num_channels)
+        fc1 = self.relu(self.fc1(avg_pool))
+        fc2 = self.sigmoid(self.fc2(fc1))
+        fc2 = fc2.view(batch_size, num_channels, 1, 1)
+        return fc2 * x
 
 class RGBD_incomplete(nn.Module):
     def __init__(self,RGBDInModule):
@@ -85,6 +100,11 @@ class RGBD_incomplete(nn.Module):
         self.deconv_stage2=nn.ConvTranspose2d(k_channels[1],1,kernel_size=3, stride=2, padding=1, output_padding=1, dilation=1)
         self.deconv_stage3=nn.ConvTranspose2d(k_channels[2],1,kernel_size=3, stride=2, padding=1, output_padding=1, dilation=1)
         self.deconv_stage4=nn.ConvTranspose2d(k_channels[3],1,kernel_size=3, stride=2, padding=1, output_padding=1, dilation=1)
+        
+        self.ca_stage1=ChannelAttention(1)
+        self.ca_stage2=ChannelAttention(145)
+        self.ca_stage3=ChannelAttention(289)
+        self.ca_stage4=ChannelAttention(577)
         self.last_conv=nn.Conv2d(4,1,1,1)
 
         
@@ -99,15 +119,20 @@ class RGBD_incomplete(nn.Module):
         print(rgb_branch2.shape)
         print(rgb_branch3.shape)
         print(rgb_branch4.shape)
+        #concatenation of adjacent features
         rgb_out4 = torch.cat((self.deconv_stage4(rgb_branch4),rgb_branch3),dim=1)
         rgb_out3 = torch.cat((self.deconv_stage3(rgb_branch3),rgb_branch2),dim=1)
         rgb_out2 = torch.cat((self.deconv_stage2(rgb_branch2),rgb_branch1),dim=1)
         rgb_out1 = self.deconv_stage1(rgb_branch1)
      
-        print(rgb_branch1.shape,rgb_out1.shape)
-        print(rgb_branch2.shape,rgb_out2.shape)
-        print(rgb_branch3.shape,rgb_out3.shape)
-        print(rgb_branch4.shape,rgb_out4.shape)
+        rgb_out4ca = self.ca_stage4(rgb_out4)
+        rgb_out3ca = self.ca_stage4(rgb_out3)
+        rgb_out2ca = self.ca_stage4(rgb_out2)
+        rgb_out1ca = self.ca_stage4(rgb_out1)
+        print(rgb_branch1.shape,rgb_out1.shape,rgb_out1ca.shape)
+        print(rgb_branch2.shape,rgb_out2.shape,rgb_out2ca.shape)
+        print(rgb_branch3.shape,rgb_out3.shape,rgb_out3ca.shape)
+        print(rgb_branch4.shape,rgb_out4.shape,rgb_out4ca.shape)
         rgb_out4 = torch.cat((self.deconv(rgb_branch4),rgb_branch3),dim=0)
         rgb_out3 = torch.cat((self.deconv(rgb_branch3),rgb_branch2),dim=0)
         rgb_out2 = torch.cat((self.deconv(rgb_branch2),rgb_branch1),dim=0)
