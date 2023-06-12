@@ -151,10 +151,10 @@ class RGBD_incomplete(nn.Module):
         rgb_sal_3=self.sal_stage3(rgb_out3ca)
         rgb_sal_4=self.sal_stage4(rgb_out4ca)
         
-        print(rgb_branch1.shape,rgb_out1.shape,rgb_out1ca.shape,rgb_sal_1.shape)
+        '''print(rgb_branch1.shape,rgb_out1.shape,rgb_out1ca.shape,rgb_sal_1.shape)
         print(rgb_branch2.shape,rgb_out2.shape,rgb_out2ca.shape,rgb_sal_2.shape)
         print(rgb_branch3.shape,rgb_out3.shape,rgb_out3ca.shape,rgb_sal_3.shape)
-        print(rgb_branch4.shape,rgb_out4.shape,rgb_out4ca.shape,rgb_sal_4.shape)
+        print(rgb_branch4.shape,rgb_out4.shape,rgb_out4ca.shape,rgb_sal_4.shape)'''
   
         # Resize tensors to have the same number of channels
         tensor_1 = torch.nn.functional.interpolate(rgb_sal_1, size=(384,384))
