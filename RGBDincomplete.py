@@ -76,10 +76,10 @@ class RGBD_incomplete(nn.Module):
         
         self.RGBDInModule = RGBDInModule
         self.relu = nn.ReLU(inplace=True)
-        self.conv_stage1=nn.Sequential(nn.Conv2d(k_channels[0], int(k_channels[0] / 2), 1), self.relu)
-        self.conv_stage2=nn.Sequential(nn.Conv2d(k_channels[1], int(k_channels[1] / 2), 1), self.relu)
-        self.conv_stage3=nn.Sequential(nn.Conv2d(k_channels[2], int(k_channels[2] / 2), 1), self.relu)
-        self.conv_stage4=nn.Sequential(nn.Conv2d(k_channels[3], int(k_channels[3] / 2), 1), self.relu)
+        self.conv_stage1=nn.Sequential(nn.Conv2d(k_channels[0], 1, 1), nn.Sigmoid())
+        self.conv_stage2=nn.Sequential(nn.Conv2d(k_channels[1], 1, 1), nn.Sigmoid())
+        self.conv_stage3=nn.Sequential(nn.Conv2d(k_channels[2], 1, 1), nn.Sigmoid())
+        self.conv_stage4=nn.Sequential(nn.Conv2d(k_channels[3], 1, 1), nn.Sigmoid())
  
         self.deconv=nn.ConvTranspose2d(144,1,kernel_size=3, stride=2, padding=1, output_padding=1, dilation=1)
         self.last_conv=nn.Conv2d(4,1,1,1)
@@ -87,11 +87,11 @@ class RGBD_incomplete(nn.Module):
         
     def forward(self, f_all):
         feat_rgb = self.RGBDInModule(f_all)
-        
-        rgb_branch1 = self.conv_stage1(feat_rgb[0])
-        rgb_branch2 = self.conv_stage2(feat_rgb[1])
-        rgb_branch3 = self.conv_stage3(feat_rgb[2])
-        rgb_branch4 = self.conv_stage4(feat_rgb[3])
+        #spatial attention
+        rgb_branch1 = self.conv_stage1(feat_rgb[0])*feat_rgb[0]
+        rgb_branch2 = self.conv_stage2(feat_rgb[1])*feat_rgb[1]
+        rgb_branch3 = self.conv_stage3(feat_rgb[2])*feat_rgb[2]
+        rgb_branch4 = self.conv_stage4(feat_rgb[3])*feat_rgb[3]
         print(rgb_branch1.shape)
         print(rgb_branch2.shape)
         print(rgb_branch3.shape)
