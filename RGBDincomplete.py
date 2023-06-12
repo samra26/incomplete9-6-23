@@ -81,7 +81,10 @@ class RGBD_incomplete(nn.Module):
         self.conv_stage3=nn.Sequential(nn.Conv2d(k_channels[2], 1, 1), nn.Sigmoid())
         self.conv_stage4=nn.Sequential(nn.Conv2d(k_channels[3], 1, 1), nn.Sigmoid())
  
-        self.deconv=nn.ConvTranspose2d(144,1,kernel_size=3, stride=2, padding=1, output_padding=1, dilation=1)
+        self.deconv_stage1=nn.ConvTranspose2d(k_channels[0],1,kernel_size=3, stride=2, padding=1, output_padding=1, dilation=1)
+        self.deconv_stage2=nn.ConvTranspose2d(k_channels[1],1,kernel_size=3, stride=2, padding=1, output_padding=1, dilation=1)
+        self.deconv_stage3=nn.ConvTranspose2d(k_channels[2],1,kernel_size=3, stride=2, padding=1, output_padding=1, dilation=1)
+        self.deconv_stage4=nn.ConvTranspose2d(k_channels[3],1,kernel_size=3, stride=2, padding=1, output_padding=1, dilation=1)
         self.last_conv=nn.Conv2d(4,1,1,1)
 
         
@@ -96,16 +99,20 @@ class RGBD_incomplete(nn.Module):
         print(rgb_branch2.shape)
         print(rgb_branch3.shape)
         print(rgb_branch4.shape)
-        rgb_out4 = torch.cat((self.deconv(rgb_branch4),rgb_branch3),dim=0)
-        rgb_out3 = torch.cat((self.deconv(rgb_branch3),rgb_branch2),dim=0)
-        rgb_out2 = torch.cat((self.deconv(rgb_branch2),rgb_branch1),dim=0)
-        rgb_out1 = self.deconv(rgb_branch1)
+        rgb_out4 = self.deconv_stage4(rgb_branch4)
+        rgb_out3 = self.deconv_stage3(rgb_branch3)
+        rgb_out2 = self.deconv_stage2(rgb_branch2)
+        rgb_out1 = self.deconv_stage1(rgb_branch1)
      
         print(rgb_branch1.shape,rgb_out1.shape)
         print(rgb_branch2.shape,rgb_out2.shape)
         print(rgb_branch3.shape,rgb_out3.shape)
         print(rgb_branch4.shape,rgb_out4.shape)
-        
+        rgb_out4 = torch.cat((self.deconv(rgb_branch4),rgb_branch3),dim=0)
+        rgb_out3 = torch.cat((self.deconv(rgb_branch3),rgb_branch2),dim=0)
+        rgb_out2 = torch.cat((self.deconv(rgb_branch2),rgb_branch1),dim=0)
+        rgb_out1 = self.deconv(rgb_branch1)
+     
         feat_rgb_out=self.last_conv(torch.cat((rgb_out1,rgb_out2,rgb_out3,rgb_out4),dim=1))
         print(feat_rgb_out.shape)
         
