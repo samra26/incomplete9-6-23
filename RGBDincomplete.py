@@ -80,12 +80,18 @@ class ChannelAttention(nn.Module):
 
     def forward(self, x):
         batch_size, num_channels, height, width = x.size()
+        print(batch_size, num_channels, height, width)
         avg_pool = self.avg_pool(x).view(batch_size, num_channels)
-        avg_pool = avg_pool.view(batch_size, num_channels, 1, 1)
+        print(avg_pool.shape)
         fc1 = self.relu(self.fc1(avg_pool))
+        print(fc1.shape)
         fc2 = self.sigmoid(self.fc2(fc1))
+        print(fc2.shape)
         fc2 = fc2.view(batch_size, num_channels, 1, 1)
-        return fc2 * x
+        print(fc2.shape)
+        out=fc2*x
+        print(out.shape)
+        return out
 
 class SpatialAttention(nn.Module):
     def __init__(self, in_channels):
