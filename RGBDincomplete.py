@@ -116,6 +116,7 @@ class RGBD_incomplete(nn.Module):
     def forward(self, f_all):
         feat_rgb = self.RGBDInModule(f_all)
         #spatial attention
+        print(self.conv_stage1(feat_rgb[0]).shape,feat_rgb[0].shape)
         rgb_branch1 = self.conv_stage1(feat_rgb[0])*feat_rgb[0]
         rgb_branch2 = self.conv_stage2(feat_rgb[1])*feat_rgb[1]
         rgb_branch3 = self.conv_stage3(feat_rgb[2])*feat_rgb[2]
