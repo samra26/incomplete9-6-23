@@ -144,8 +144,16 @@ class RGBD_incomplete(nn.Module):
         print(rgb_branch3.shape,rgb_out3.shape,rgb_out3ca.shape,rgb_sal_3.shape)
         print(rgb_branch4.shape,rgb_out4.shape,rgb_out4ca.shape,rgb_sal_4.shape)
   
-     
-        feat_rgb_out=self.last_conv(torch.cat((rgb_sal_1,rgb_sal_2,rgb_sal_3,rgb_sal_4),dim=1))
+        # Resize tensors to have the same number of channels
+        tensor_1 = torch.nn.functional.interpolate(rgb_sal_1, size=(384,384))
+        tensor_2 = torch.nn.functional.interpolate(rgb_sal_2, size=(384,384))
+        tensor_3 = torch.nn.functional.interpolate(rgb_sal_3, size=(384,384))
+        tensor_4 = torch.nn.functional.interpolate(rgb_sal_4, size=(384,384))
+
+        # Concatenate tensors along the channel dimension (dimension 1)
+        concatenated_tensor = torch.cat((tensor_1, tensor_2, tensor_3, tensor_4), dim=1)
+
+        feat_rgb_out=self.last_conv(concatenated_tensor)
         print(feat_rgb_out.shape)
         
         return feat_rgb_out
