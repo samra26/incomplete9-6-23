@@ -126,9 +126,9 @@ class RGBD_incomplete(nn.Module):
         rgb_out1 = self.deconv_stage1(rgb_branch1)
      
         rgb_out4ca = self.ca_stage4(rgb_out4)
-        rgb_out3ca = self.ca_stage4(rgb_out3)
-        rgb_out2ca = self.ca_stage4(rgb_out2)
-        rgb_out1ca = self.ca_stage4(rgb_out1)
+        rgb_out3ca = self.ca_stage3(rgb_out3)
+        rgb_out2ca = self.ca_stage2(rgb_out2)
+        rgb_out1ca = self.ca_stage1(rgb_out1)
         print(rgb_branch1.shape,rgb_out1.shape,rgb_out1ca.shape)
         print(rgb_branch2.shape,rgb_out2.shape,rgb_out2ca.shape)
         print(rgb_branch3.shape,rgb_out3.shape,rgb_out3ca.shape)
