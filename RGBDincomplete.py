@@ -85,16 +85,27 @@ class ChannelAttention(nn.Module):
         fc2 = fc2.view(batch_size, num_channels, 1, 1)
         return fc2 * x
 
+class SpatialAttention(nn.Module):
+    def __init__(self, in_channels):
+        super(SpatialAttention, self).__init__()
+        self.conv = nn.Conv2d(in_channels, 1, kernel_size=1)
+        self.sigmoid = nn.Sigmoid()
+
+    def forward(self, x):
+        attention = self.conv(x)
+        attention = self.sigmoid(attention)
+        return attention * x
+    
 class RGBD_incomplete(nn.Module):
     def __init__(self,RGBDInModule):
         super(RGBD_incomplete, self).__init__()
         
         self.RGBDInModule = RGBDInModule
         self.relu = nn.ReLU(inplace=True)
-        self.conv_stage1=nn.Sequential(nn.Conv2d(k_channels[0], 1, 1), nn.Sigmoid())
-        self.conv_stage2=nn.Sequential(nn.Conv2d(k_channels[1], 1, 1), nn.Sigmoid())
-        self.conv_stage3=nn.Sequential(nn.Conv2d(k_channels[2], 1, 1), nn.Sigmoid())
-        self.conv_stage4=nn.Sequential(nn.Conv2d(k_channels[3], 1, 1), nn.Sigmoid())
+        self.conv_stage1=SpatialAttention(k_channels[0])
+        self.conv_stage2=SpatialAttention(k_channels[1])
+        self.conv_stage3=SpatialAttention(k_channels[2])
+        self.conv_stage4=SpatialAttention(k_channels[3])
  
         self.deconv_stage1=nn.ConvTranspose2d(k_channels[0],1,kernel_size=3, stride=2, padding=1, output_padding=1, dilation=1)
         self.deconv_stage2=nn.ConvTranspose2d(k_channels[1],1,kernel_size=3, stride=2, padding=1, output_padding=1, dilation=1)
@@ -116,12 +127,12 @@ class RGBD_incomplete(nn.Module):
     def forward(self, f_all):
         feat_rgb = self.RGBDInModule(f_all)
         #spatial attention
-        print(self.conv_stage1(feat_rgb[0]).shape,feat_rgb[0].shape)
-        rgb_branch1 = self.conv_stage1(feat_rgb[0])*feat_rgb[0]
-        rgb_branch2 = self.conv_stage2(feat_rgb[1])*feat_rgb[1]
-        rgb_branch3 = self.conv_stage3(feat_rgb[2])*feat_rgb[2]
-        rgb_branch4 = self.conv_stage4(feat_rgb[3])*feat_rgb[3]
-        print(self.conv_stage1(feat_rgb[0]).shape,feat_rgb[0].shape)
+        
+        rgb_branch1 = self.conv_stage1(feat_rgb[0])
+        rgb_branch2 = self.conv_stage2(feat_rgb[1])
+        rgb_branch3 = self.conv_stage3(feat_rgb[2])
+        rgb_branch4 = self.conv_stage4(feat_rgb[3])
+        
         #concatenation of adjacent features
         rgb_out4 = torch.cat((self.deconv_stage4(rgb_branch4),rgb_branch3),dim=1)
         rgb_out3 = torch.cat((self.deconv_stage3(rgb_branch3),rgb_branch2),dim=1)
