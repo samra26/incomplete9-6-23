@@ -120,7 +120,7 @@ class RGBD_incomplete(nn.Module):
         rgb_branch2 = self.conv_stage2(feat_rgb[1])*feat_rgb[1]
         rgb_branch3 = self.conv_stage3(feat_rgb[2])*feat_rgb[2]
         rgb_branch4 = self.conv_stage4(feat_rgb[3])*feat_rgb[3]
-
+        print(self.conv_stage1(feat_rgb[0]).shape,feat_rgb[0].shape)
         #concatenation of adjacent features
         rgb_out4 = torch.cat((self.deconv_stage4(rgb_branch4),rgb_branch3),dim=1)
         rgb_out3 = torch.cat((self.deconv_stage3(rgb_branch3),rgb_branch2),dim=1)
