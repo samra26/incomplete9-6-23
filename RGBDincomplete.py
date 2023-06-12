@@ -95,8 +95,9 @@ class RGBD_incomplete(nn.Module):
         rgb_out4 = self.deconv(rgb_branch4)*rgb_branch3
         rgb_out3 = self.deconv(rgb_branch3)*rgb_branch2
         rgb_out2 = self.deconv(rgb_branch2)*rgb_branch1
+        rgb_out1 = self.deconv(rgb_branch1)
      
-        print(rgb_branch1.shape)
+        print(rgb_branch1.shape,rgb_out1.shape)
         print(rgb_branch2.shape,rgb_out2.shape)
         print(rgb_branch3.shape,rgb_out3.shape)
         print(rgb_branch4.shape,rgb_out4.shape)
