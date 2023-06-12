@@ -81,7 +81,7 @@ class ChannelAttention(nn.Module):
     def forward(self, x):
         batch_size, num_channels, height, width = x.size()
         avg_pool = self.avg_pool(x).view(batch_size, num_channels)
-        avg_pool = avg_pool.view(batch_size, -1)
+        avg_pool = avg_pool.view(batch_size, num_channels, 1, 1)
         fc1 = self.relu(self.fc1(avg_pool))
         fc2 = self.sigmoid(self.fc2(fc1))
         fc2 = fc2.view(batch_size, num_channels, 1, 1)
