@@ -76,10 +76,10 @@ class RGBD_incomplete(nn.Module):
         
         self.RGBDInModule = RGBDInModule
         self.relu = nn.ReLU(inplace=True)
-        self.conv_stage1=nn.Sequential(nn.Conv2d(k_channels[0], int(k_channels[0] / 1), 1), self.relu)
+        self.conv_stage1=nn.Sequential(nn.Conv2d(k_channels[0], int(k_channels[0] / 2), 1), self.relu)
         self.conv_stage2=nn.Sequential(nn.Conv2d(k_channels[1], int(k_channels[1] / 2), 1), self.relu)
-        self.conv_stage3=nn.Sequential(nn.Conv2d(k_channels[2], int(k_channels[2] / 4), 1), self.relu)
-        self.conv_stage4=nn.Sequential(nn.Conv2d(k_channels[3], int(k_channels[3] / 8), 1), self.relu)
+        self.conv_stage3=nn.Sequential(nn.Conv2d(k_channels[2], int(k_channels[2] / 2), 1), self.relu)
+        self.conv_stage4=nn.Sequential(nn.Conv2d(k_channels[3], int(k_channels[3] / 2), 1), self.relu)
  
         self.deconv=nn.ConvTranspose2d(144,1,kernel_size=3, stride=2, padding=1, output_padding=1, dilation=1)
         self.last_conv=nn.Conv2d(4,1,1,1)
@@ -92,9 +92,9 @@ class RGBD_incomplete(nn.Module):
         rgb_branch2 = self.conv_stage2(feat_rgb[1])
         rgb_branch3 = self.conv_stage3(feat_rgb[2])
         rgb_branch4 = self.conv_stage4(feat_rgb[3])
-        rgb_out4 = self.deconv(rgb_branch4)*rgb_branch3
-        rgb_out3 = self.deconv(rgb_branch3)*rgb_branch2
-        rgb_out2 = self.deconv(rgb_branch2)*rgb_branch1
+        rgb_out4 = torch.cat((self.deconv(rgb_branch4),rgb_branch3),dim=1)
+        rgb_out3 = torch.cat((self.deconv(rgb_branch3),rgb_branch2),dim=1)
+        rgb_out2 = torch.cat((self.deconv(rgb_branch2),rgb_branch1),dim=1)
         rgb_out1 = self.deconv(rgb_branch1)
      
         print(rgb_branch1.shape,rgb_out1.shape)
