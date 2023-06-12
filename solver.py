@@ -12,7 +12,10 @@ import torch.nn as nn
 import argparse
 import os.path as osp
 import os
-size_coarse = (10, 10)
+size_coarse1 = (192,192)
+size_coarse2 = (96,96)
+size_coarse3 = (48,48)
+size_coarse4 = (24,24)
 from tqdm import trange, tqdm
 
 
@@ -131,10 +134,20 @@ class Solver(object):
               
                 self.optimizer.zero_grad()
                
-                sal_rgb_only = self.net(sal_image)
-                sal_rgb_only_loss =  F.binary_cross_entropy_with_logits(sal_rgb_only, sal_label, reduction='sum')
+                sal_rgb_only,sal1,sal2,sal3,sal4 = self.net(sal_image)
+                
+                sal_label_coarse1 = F.interpolate(sal_label, size_coarse1, mode='bilinear', align_corners=True)
+                sal_label_coarse2 = F.interpolate(sal_label, size_coarse2, mode='bilinear', align_corners=True)
+                sal_label_coarse3 = F.interpolate(sal_label, size_coarse3, mode='bilinear', align_corners=True)
+                sal_label_coarse4 = F.interpolate(sal_label, size_coarse4, mode='bilinear', align_corners=True)
+                
+                sal_loss_final =  F.binary_cross_entropy_with_logits(sal_rgb_only, sal_label, reduction='sum')
+                sal_loss_coarse1 = F.binary_cross_entropy_with_logits(sal1, sal_label_coarse1, reduction='sum')
+                sal_loss_coarse2 = F.binary_cross_entropy_with_logits(sal2, sal_label_coarse2, reduction='sum')
+                sal_loss_coarse3 = F.binary_cross_entropy_with_logits(sal3, sal_label_coarse3, reduction='sum')
+                sal_loss_coarse4 = F.binary_cross_entropy_with_logits(sal4, sal_label_coarse4, reduction='sum')
 
-                sal_rgb_only_loss = sal_rgb_only_loss/ (self.iter_size * self.config.batch_size_train)
+                sal_rgb_only_loss = sal_loss_final + sal_loss_coarse1 + sal_loss_coarse2 + sal_loss_coarse3 + sal_loss_coarse4
                 r_sal_loss += sal_rgb_only_loss.data
                 r_sal_loss_item+=sal_rgb_only_loss.item() * sal_image.size(0)
                 sal_rgb_only_loss.backward()
