@@ -27,7 +27,7 @@ class Solver(object):
         self.iter_size = config.iter_size
         self.show_every = config.show_every
         #self.build_model()
-        self.net = build_model(self.config.network, self.config.arch)
+        self.net = build_model(self.config.network, self.config.arch,self.config.embed_dim)
         #self.net.eval()
         if config.mode == 'test':
             print('Loading pre-trained model for testing from %s...' % self.config.model)
