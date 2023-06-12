@@ -100,8 +100,8 @@ class RGBD_incomplete(nn.Module):
         print(rgb_branch3.shape)
         print(rgb_branch4.shape)
         rgb_out4 = torch.cat((self.deconv_stage4(rgb_branch4),rgb_branch3),dim=1)
-        rgb_out3 = self.deconv_stage3(rgb_branch3)
-        rgb_out2 = self.deconv_stage2(rgb_branch2)
+        rgb_out3 = torch.cat((self.deconv_stage3(rgb_branch3),rgb_branch2),dim=1)
+        rgb_out2 = torch.cat((self.deconv_stage2(rgb_branch2),rgb_branch1),dim=1)
         rgb_out1 = self.deconv_stage1(rgb_branch1)
      
         print(rgb_branch1.shape,rgb_out1.shape)
