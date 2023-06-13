@@ -174,8 +174,14 @@ class Solver(object):
                         device = torch.device(self.config.device_id)
                         valid_image, valid_label=valid_image.to(device),valid_label.to(device)
             
-                    valid_rgb_only = self.net(valid_image)
-                    valid_rgb_only_loss =  F.binary_cross_entropy_with_logits(valid_rgb_only,valid_label, reduction='sum')
+                    valid_rgb_only,vsal1,vsal2,vsal3,vsal4= self.net(valid_image)
+                    valid_loss_final =  F.binary_cross_entropy_with_logits(valid_rgb_only,valid_label, reduction='sum')
+                    vsal_loss_coarse1 = F.binary_cross_entropy_with_logits(vsal1, sal_label_coarse1, reduction='sum')
+                    vsal_loss_coarse2 = F.binary_cross_entropy_with_logits(vsal2, sal_label_coarse2, reduction='sum')
+                    vsal_loss_coarse3 = F.binary_cross_entropy_with_logits(vsal3, sal_label_coarse3, reduction='sum')
+                    vsal_loss_coarse4 = F.binary_cross_entropy_with_logits(vsal4, sal_label_coarse4, reduction='sum')
+                    
+                    valid_rgb_only_loss = valid_loss_final + vsal_loss_coarse1 + vsal_loss_coarse2 + vsal_loss_coarse3 + vsal_loss_coarse4
                                   
                     running_val_loss+=valid_rgb_only_loss.item() * valid_image.size(0)
                     mea = torch.abs(valid_rgb_only  - valid_label).mean()
