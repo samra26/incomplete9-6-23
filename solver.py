@@ -159,12 +159,12 @@ class Solver(object):
             train_loss=r_sal_loss_item/len(self.train_loader.dataset)
             loss_vals.append(train_loss)
             
-            print('Epoch:[%2d/%2d] | Train Loss : %.3f' % (epoch, self.config.epoch,train_loss))
-            print('learning rate',self.optimizer.param_groups[0]['lr'])
+            print('Epoch:[%2d/%2d] | Train Loss : %.3f | Learning rate : %0.7f' % (epoch, self.config.epoch,train_loss,self.optimizer.param_groups[0]['lr']))
+            
             # Evaluate the model on the validation set
             self.net.eval()
             running_val_loss = 0.0
-
+            avg_mae, img_num = 0.0, 0.0
             with torch.no_grad():
                 for i, data_batch in tqdm(enumerate(self.val_loader)):
                     valid_image, valid_label= data_batch[0], data_batch[1]
@@ -178,10 +178,16 @@ class Solver(object):
                     valid_rgb_only_loss =  F.binary_cross_entropy_with_logits(valid_rgb_only,valid_label, reduction='sum')
                                   
                     running_val_loss+=valid_rgb_only_loss.item() * valid_image.size(0)
+                    mea = torch.abs(valid_rgb_only  - valid_label).mean()
+                    if mea == mea: # for Nan
+                        avg_mae += mea
+                        img_num += 1.0
+            avg_mae /= img_num
+            mae_valid = avg_mae.item()
  
             # Calculate validation loss
             val_epoch_loss = running_val_loss / len(self.val_loader.dataset)
-            print(f'Validation Loss: {val_epoch_loss:.6f}')
+            print('Validation Loss: % 0.6f | MAE : % 0.4f' % (val_epoch_loss,mae_valid))
             
         # save model
         torch.save(self.net.state_dict(), '%s/final.pth' % self.config.save_folder)
